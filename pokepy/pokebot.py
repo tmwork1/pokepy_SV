@@ -1007,7 +1007,7 @@ class Pokebot(Battle):
                     return
                 else:
                     break
-            self.party[0].append(Pokemon('ピカチュウ'))
+            self.party[0].append(Pokemon())
             self.read_box_pokemon(i)
             self.press_button('DPAD_DOWN', post_sleep=self.TRANS_CAPTURE_TIME)
             if not is_linux:
@@ -1073,7 +1073,7 @@ class Pokebot(Battle):
             else:
                 ability = Pokemon.zukan[name]['ability'][0]
         self.party[0][ind].org_ability = ability
-        print(f'\特性 {self.party[0][ind].ability}')
+        print(f'\t特性 {self.party[0][ind].ability}')
 
         # もちもの
         img1 = BGR2BIN(self.img[635:685, 1455:1785], threshold=180, bitwise_not=True)

@@ -1,9 +1,9 @@
 from pokepy.pokebot import *
 
+Pokemon.init()
 
 bot = Pokebot()
 n = 20 # 試験回数
-
 
 filename = 'log/latency.log'
 print(f'Result will be saved into {filename}')
