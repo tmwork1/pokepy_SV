@@ -130,7 +130,7 @@ class Pokebot(Battle):
     battle_command_time = 10    # ターンのコマンド入力にかかる時間の初期値
     change_command_time = 3     # 交代のコマンド入力にかかる時間の初期値
 
-    GAME_TIME_MINUIT = 20
+    GAME_TIME_MINUIT = 20       # 試合時間 [min]
 
     PRESS_INTERVAL = 0.2        # 決定ボタンの入力間隔
     CAPTURE_TIME = 0.1          # ボタン入力からキャプチャまでの待ち時間
@@ -187,6 +187,7 @@ class Pokebot(Battle):
     conditions, limited_conditions, countable_conditions = [], [], []
 
     def init():
+        # ログ用のディレクトリ
         os.makedirs('log/battle/', exist_ok=True)
 
         # nxbt設定
@@ -209,7 +210,7 @@ class Pokebot(Battle):
                     print(f'画面遷移なしの遅延: {Pokebot.CAPTURE_TIME}')
                     print(f'画面遷移ありの遅延: {Pokebot.TRANS_CAPTURE_TIME}')
 
-        # テンプレート画像の読み込み
+        # 残りのテンプレート画像の読み込み
         for t in Pokemon.type_file_code:
             img = BGR2BIN(cv2.imread(f'data/terastal/{Pokemon.type_file_code[t]}.png'), threshold=230, bitwise_not=True)
             Pokebot.templ_Ttypes[t] = img[24:-26, 20:-22]
@@ -234,6 +235,7 @@ class Pokebot(Battle):
         Pokebot.is_init = True
 
     def __init__(self):
+        # ライブラリの初期化
         if not Pokebot.is_init:
             Pokebot.init()
         
@@ -244,11 +246,11 @@ class Pokebot(Battle):
         self.reset_game()
 
     def selection_command(self, player):
-        commands = list(range(20 + len(self.party[player])))
-        random.shuffle(commands)
-        return commands[:3]
+        """{player}の選出画面で呼ばれる方策関数"""
+        return random.sample(list(range(len(self.party[player]))), 3)
     
     def reset_game(self):
+        """試合をリセットする"""
         self.start_time = time.time()
         super().reset_game()
         self.turn = 0
@@ -259,6 +261,7 @@ class Pokebot(Battle):
         self.observed[1] = self.selected[1]
 
     def capture(self, filename=''):
+        """画面をキャプチャする"""
         if is_linux or filename:
             cap.read() # バッファ対策
             _, self.img = cap.read()
@@ -266,9 +269,11 @@ class Pokebot(Battle):
                 cv2.imwrite(filename, self.img)
             
     def set_image(self, filename):
+        """画像を読み込む"""
         self.img = cv2.imread(filename)
 
     def press_button(self, button, n=1, interval=0.1, post_sleep=0.1):
+        """ボタンを押す"""
         if not is_linux:
             return
         macro = ''
@@ -284,10 +289,12 @@ class Pokebot(Battle):
                 time.sleep(0.01)
 
     def game_time(self):
+        """残りの試合時間を返す"""
         elapsed_time = time.time()-self.start_time
         return 20*60 - elapsed_time
     
     def thinking_time(self):
+        """残りの思考時間を返す"""
         match self.phase:
             case 'selection':
                 return 90 - self.selection_command_time - (time.time()-self.t0)
@@ -319,8 +326,6 @@ class Pokebot(Battle):
             if s in self.condition:
                 if s in list(self.condition.keys())[:10]:
                     self.condition[s] = condition[s]
-                elif s == 'wish':
-                    self.condition[s] = max(1, self.condition[s].real - 1) + 1j * self.condition[s].imag
                 else:
                     self.condition[s][player] = condition[s]
 
@@ -328,13 +333,17 @@ class Pokebot(Battle):
             elif s in p.condition:
                 if s == 'badpoison':
                     p.condition[s] += 1
-                elif s in ['confusion','bind']:
-                    p.condition[s] = max(1, p.condition[s] - 1) + 1j * p.condition[s].imag
+                elif s == 'bind':
+                    p.condition[s] = max(1, p.condition[s] - 1) + 0.8
+                elif s == 'confusion':
+                    p.condition[s] = max(1, p.condition[s] - 1)
                 else:
                     p.condition[s] = condition[s]
 
-    # cmd = 0~5 -> PTのcmd番目のポケモンを選出
     def input_selection_command(self, cmd_list):
+        """選出画面でコマンドを入力する
+            cmd = 0~5 -> PTのcmd番目のポケモンを選出
+        """
         print(f'{cmd_list} 番目のポケモンを選出')
         
         for cmd in cmd_list + [6]: # [6]: 決定ボタン
@@ -356,10 +365,13 @@ class Pokebot(Battle):
         
         self.selected[0] = [deepcopy(self.party[0][i]) for i in cmd_list[:-1]]
 
-    # cmd = 0~3 -> cmd番目の技を選択
-    # cmd = 10~13 -> テラスタルして(cmd-4)番目の技を選択
-    # cmd = 20~25 -> (cmd-10)番目に選出したポケモンに交代
     def input_battle_command(self, cmd):
+        """ターン開始時にコマンドを入力する
+            cmd = 0~3 -> cmd番目の技を選択
+            cmd = 10~13 -> テラスタルして(cmd-4)番目の技を選択
+            cmd = 20~25 -> (cmd-10)番目に選出したポケモンに交代
+        """
+        
         print(f'コマンド {cmd}')
 
         # 技
@@ -446,8 +458,10 @@ class Pokebot(Battle):
 
         return True
 
-    # cmd = 20~25 -> (cmd-20)番目に選出したポケモンに交代
     def input_change_command(self, cmd):
+        """任意交代時にコマンドを入力する
+            cmd = 20~25 -> (cmd-20)番目に選出したポケモンに交代
+        """
         if cmd not in self.available_commands(player=0, phase=self.phase):
             if cmd not in range(len(self.selected[0])):
                 warnings.warn(f'コマンド{cmd}が不適切です')
@@ -467,8 +481,8 @@ class Pokebot(Battle):
 
         return True
     
-    # 盤面情報を収集
     def read_battle_situlation(self):
+        """ターン開始時に盤面情報を収集する"""
         self.press_button('Y', post_sleep=self.TRANS_CAPTURE_TIME)
 
         # 相手にテラスタル権があれば、テラスタルしているか確認
@@ -581,38 +595,46 @@ class Pokebot(Battle):
 
         return True
 
+    def is_selection_window(self, capture=True):       
+        """選出画面ならTrueを返す"""
+        if capture:
+            self.capture()
+        img1 = BGR2BIN(self.img[14:64, 856:906], threshold=100, bitwise_not=True)
+        return template_match_score(img1, self.templ_selection) > 0.99
+
     def is_battle_window(self, capture=True):
+        """ターン開始時の画面ならTrueを返す"""
         if capture:
             self.capture()
         img1 = BGR2BIN(self.img[997:1039, 827:869], threshold=200, bitwise_not=True)
         return template_match_score(img1, self.templ_battle) > 0.95 # 黄色点滅時にも読み取れるように閾値を下げている
 
     def is_change_window(self, capture=True):
+        """交代画面ならTrueを返す"""
         if capture:
             self.capture()
         img1 = BGR2BIN(self.img[140:200, 770:860], threshold=150, bitwise_not=True)
         return template_match_score(img1, self.templ_change) > 0.99
 
-    def is_selection_window(self, capture=True):       
-        if capture:
-            self.capture()
-        img1 = BGR2BIN(self.img[14:64, 856:906], threshold=100, bitwise_not=True)
-        return template_match_score(img1, self.templ_selection) > 0.99
-
     def is_standby_window(self, capture=True):
+        """オンライン戦の待機画面ならTrueを返す"""
         if capture:
             self.capture()
         img1 = BGR2BIN(self.img[10:70, 28:88], threshold=100, bitwise_not=True)
         return template_match_score(img1, self.templ_standby) > 0.99
 
     def is_condition_window(self, capture=True):
+        """場の状態の確認画面ならTrueを返す"""
         if capture:
             self.capture()
         img1 = BGR2BIN(self.img[76:132, 1112:1372], threshold=200, bitwise_not=True)
         return template_match_score(img1, self.templ_condition_window) > 0.99
 
-    # 0~5: ポケモン, 6: 完了
     def selection_cursor_position(self, capture=True):
+        """選出画面でのカーソル位置を返す
+            0~5: ポケモン
+            6: 完了ボタン
+        """
         if capture:
             self.capture()
         for i in range(6):
@@ -622,9 +644,11 @@ class Pokebot(Battle):
                 return i
         return 6
 
-    # オンライン -> 0: たたかう, 1:ポケモン, 2:にげる
-    # オフライン -> 0: たたかう, 1:ポケモン, 2:バッグ, 3:にげる
     def battle_cursor_position(self, capture=True):
+        """ターン開始時の画面でのカーソル位置を返す
+            オンライン -> 0: たたかう, 1:ポケモン, 2:にげる
+            オフライン -> 0: たたかう, 1:ポケモン, 2:バッグ, 3:にげる
+        """
         if capture:
             self.capture()
         y0 = 700 if self.vs_NPC else 788
@@ -635,6 +659,7 @@ class Pokebot(Battle):
         return 0
 
     def move_cursor_position(self, capture=True):
+        """技選択画面でのカーソル位置を返す"""
         if capture:
             self.capture()
         for i in range(4):
@@ -645,6 +670,7 @@ class Pokebot(Battle):
         return 0
 
     def read_pp(self, idx, capture=True):
+        """技選択画面で残りのPPを読み取る"""
         if capture:
             self.capture()
         for thr in [200, 150, 120]:
@@ -658,7 +684,8 @@ class Pokebot(Battle):
         return 0
     
     def read_phase(self, capture=True):
-        # バトル画面の判定
+        """場面を読み取る"""
+        # ターン開始時の画面の判定
         if self.is_battle_window(capture=capture):
             self.phase = 'battle'
             return self.phase
@@ -682,6 +709,7 @@ class Pokebot(Battle):
         return self.phase
 
     def read_party_condition(self, capture=True):
+        """交代画面で自分のポケモンの状態(瀕死など)を読み取る"""
         if capture:
             self.capture()
         img1 = self.img[140:200, 1060:1300]
@@ -691,6 +719,7 @@ class Pokebot(Battle):
                 return s
 
     def read_party_display_name(self, i, capture=True):
+        """交代画面で自分のポケモンの表示名を読み取る"""
         if capture:
             self.capture()
         img1 = BGR2BIN(self.img[171+126*i:212+126*i, 94:300], threshold=100)
@@ -700,6 +729,7 @@ class Pokebot(Battle):
         return Pokemon.japanese_display_name[s]
 
     def read_party_hp(self, index, capture=True):
+        """交代画面で自分のポケモンの残りHPを読み取る"""
         if capture:
             self.capture()
         img1 = BGR2BIN(self.img[232+126*index:268+126*index, 110:298], threshold=200, bitwise_not=True)
@@ -710,6 +740,7 @@ class Pokebot(Battle):
         return hp
 
     def read_enemy_party(self, capture=True):
+        """選出画面で相手のパーティを読み取る"""
         print('相手のパーティ')
         if capture:
             self.capture()
@@ -761,6 +792,7 @@ class Pokebot(Battle):
         '''
 
     def read_enemy_terastal(self, capture=True):
+        """相手の場のポケモンがテラスタルしていればテラスタイプを返す"""
         if capture:
             self.capture()
         Ttype = ''
@@ -778,6 +810,7 @@ class Pokebot(Battle):
         return Ttype
 
     def read_display_name(self, player=0, capture=True):
+        """場のポケモンの表示名を読み取る"""
         if capture:
             self.capture()
         img1 = BGR2BIN(self.img[80:130, 160:450], threshold=200, bitwise_not=True)
@@ -794,6 +827,7 @@ class Pokebot(Battle):
         return display_name
 
     def read_hp(self, capture=True):
+        """場のポケモンの残りHPを読み取る"""
         if capture:
             self.capture()
         img1 = BGR2BIN(self.img[475:515, 210:293], threshold=200, bitwise_not=False)
@@ -809,6 +843,7 @@ class Pokebot(Battle):
         return hp
 
     def read_hp_ratio(self, capture=True):
+        """場のポケモンのHP割合を読み取る"""
         if capture:
             self.capture()
         dy, dx = 46, 242
@@ -822,6 +857,7 @@ class Pokebot(Battle):
         return rhp
 
     def read_item(self, capture=True):
+        """場のポケモンのアイテムを読み取る"""
         if capture:
             self.capture()
         img1 = BGR2BIN(self.img[350:395, 470:760], threshold=230, bitwise_not=True)
@@ -829,6 +865,7 @@ class Pokebot(Battle):
         return OCR(img1, candidates=list(Pokemon.items.keys())+[''], log_dir='log/ocr/item/')
 
     def read_rank(self, capture=True):
+        """場のポケモンの能力ランクを読み取る"""
         if capture:
             self.capture()
 
@@ -854,6 +891,7 @@ class Pokebot(Battle):
         return ranks
 
     def read_ailment(self, capture=True):
+        """場のポケモンの状態異常を読み取る"""
         if capture:
             self.capture()
 
@@ -868,6 +906,7 @@ class Pokebot(Battle):
         return result
 
     def read_condition(self, capture=True):
+        """場とポケモンの状態変化を読み取る"""
         if capture:
             self.capture()
 
@@ -892,6 +931,10 @@ class Pokebot(Battle):
                             if template_match_score(img2, self.templ_condition_turns[j]) > 0.99:
                                 condition[t] = j+1
                                 break
+                        
+                        # ねがいごと回復設定 (要実装)
+                        if t == 'wish':
+                            pass
 
                     elif t in self.countable_conditions:
                         # カウントを取得
@@ -922,6 +965,7 @@ class Pokebot(Battle):
         return condition
 
     def read_enemy_death(self, capture=True):
+        """パーティ確認画面で相手のポケモンが瀕死かどうか確認する"""
         if capture:
             self.capture()
 
@@ -940,6 +984,7 @@ class Pokebot(Battle):
                 print(f'{p1.display_name} 瀕死')
 
     def dump(self):
+        """ターンの情報をJSON形式で出力する"""
         dict = {
             'index': [],            # 場のポケモンの選出番号
             'selected':[[], []]
@@ -958,6 +1003,7 @@ class Pokebot(Battle):
         return json.dumps(dict, ensure_ascii=False)        
 
     def dump_party(self, player=0):
+        """パーティの情報をJSON形式で出力する"""
         result = {}
         for i,p in enumerate(self.party[player]):
             result[str(i)] = {
@@ -975,6 +1021,7 @@ class Pokebot(Battle):
         return json.dumps(result, ensure_ascii=False)
 
     def load_party(self):
+        """パーティを読み込む"""
         print('パーティ読み込み中...')
         self.party[0].clear()
         with open('log/party.log', encoding='utf-8') as fin:
@@ -995,6 +1042,7 @@ class Pokebot(Battle):
                 self.party[0][-1].show()
 
     def save_party(self):
+        """パーティを保存する"""
         print('パーティは "log/party.log" に保存されます')
         template = BGR2BIN(cv2.imread('data/screen/judge.png'), threshold=128)
         self.party[0] = []
@@ -1019,6 +1067,7 @@ class Pokebot(Battle):
         self.press_button('DPAD_UP', n=len(self.party[0]))
 
     def read_box_pokemon(self, ind):
+        """ボックスのポケモンを読み込む"""
         self.capture()
 
         # 特性：フォルムの識別に使うため先に読み込む
@@ -1129,6 +1178,7 @@ class Pokebot(Battle):
             print(f'\tフォルム: {self.party[0][ind].name}')
 
     def read_buffer(self):
+        """バッファ内の情報を読み込む"""
         new_buffer = []
         move_order = []
 
@@ -1254,6 +1304,7 @@ class Pokebot(Battle):
             print(f'素早さ推定 {p.name} {p.speed_range[0]}~{p.speed_range[1]}')
 
     def read_form(self, display_name, capture=True):
+        """場のポケモンのフォルムを読み取る"""
         if display_name not in ['ウーラオス','ケンタロス','ザシアン','ザマゼンタ']:
             return ''
         
@@ -1279,6 +1330,7 @@ class Pokebot(Battle):
         return ''
 
     def read_win_lose(self, capture=True):
+        """勝敗表示を読み取る"""
         if capture:
             self.capture()
         img1 = BGR2BIN(self.img[940:1060, 400:750], threshold=140, bitwise_not=True)
@@ -1291,6 +1343,7 @@ class Pokebot(Battle):
         return result
 
     def trim(self):
+        """画像をトリミングする (状態変化の画像作成用)"""
         dy = 86
         for i in range(6):
             img1 = self.img[188+dy*i:232+dy*i, 1190:1450] # condition
@@ -1303,6 +1356,7 @@ class Pokebot(Battle):
             #cv2.imwrite(f'log/trim_{i}.png', img1)
 
     def read_ability_text(self, player, capture=True):
+        """画面左右に表示される特性のテキストを読み取る"""
         if capture:
             self.capture()
 
@@ -1344,6 +1398,7 @@ class Pokebot(Battle):
             return False
 
     def read_bottom_text(self, capture=True):
+        """画面下に表示されるテキストを読み取る"""
         if capture:
             self.capture()
 
@@ -1489,7 +1544,19 @@ class Pokebot(Battle):
         else:
             return False
 
-    def main_loop(self, feedback_input=True, vs_NPC=False):
+    def main_loop(self, vs_NPC: bool=False, feedback_input: bool=True) -> None:
+        """Botを実行する
+        
+        Parameters:
+        --------------
+        vs_NPC: bool
+            Trueを指定すると、対NPC戦モードで動作する
+
+        feedback_input: bool
+            Trueを指定すると、コマンド入力後にカーソル位置が正しいかチェックする
+            入力精度が向上するが時間がかかる
+        """
+
         self.feedback_input = feedback_input
         self.vs_NPC = bool(vs_NPC)
         print('対NPC' if self.vs_NPC else '対人戦')
