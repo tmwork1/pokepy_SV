@@ -9,22 +9,22 @@ import warnings
 
 
 def round_half_up(v: float) -> int:
-    """四捨五入した値を返す。"""
+    """四捨五入した値を返す"""
     return int(Decimal(str(v)).quantize(Decimal('0'),rounding=ROUND_HALF_UP))
 
 def round_half_down(v: float) -> int:
-    """五捨五超入した値を返す。"""
+    """五捨五超入した値を返す"""
     return int(Decimal(str(v)).quantize(Decimal('0'),rounding=ROUND_HALF_DOWN))
 
 def push(dict: dict, key: str, value: int|float):
-    """dictに要素を追加する。すでにkeyがある場合はvalueを加算する。"""
+    """dictに要素を追加する。すでにkeyがある場合はvalueを加算する"""
     if key not in dict:
         dict[key] = value
     else:
         dict[key] += value
 
 def zero_ratio(dict: dict) -> float:
-    """keyがゼロのvalueを全valueの合計値で割った値を返す。"""
+    """keyがゼロのvalueを全valueの合計値で割った値を返す"""
     n, n0 = 0, 0
     for key in dict:
         n += dict[key]
@@ -33,18 +33,18 @@ def zero_ratio(dict: dict) -> float:
     return n0/n
 
 def offset_hp_keys(hp_dict: dict, v: int) -> dict:
-    """hp dictのすべてのkeyにvを加算したdictを返す。"""
+    """hp dictのすべてのkeyにvを加算したdictを返す"""
     result = {}
     for hp in hp_dict:
         h = int(float(hp))
-        new_hp = str(max(0, h+v)) if h > 0 else '0'
+        new_hp = '0' if h == 0 else str(max(0, h+v))
         if new_hp != '0' and hp[-2:] == '.0':
             new_hp += '.0'
-        result[new_hp] = hp_dict[hp]
+        push(result, new_hp, hp_dict[hp])
     return result
 
 def to_hankaku(text: str) -> str:
-    """全角英数字を半角に変換した文字列を返す。"""
+    """全角英数字を半角に変換した文字列を返す"""
     return text.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)})).replace('・','･')
 
 def average(ls: list[float]) -> float:
@@ -284,7 +284,7 @@ class Pokemon:
     }
 
     def __init__(self, name: str='ピカチュウ', use_template:bool=True):
-        """{name}のポケモンを生成する。{use_template}=Trueならテンプレートを適用して初期化する。"""
+        """{name}のポケモンを生成する。{use_template}=Trueならテンプレートを適用して初期化する"""
         self.sex = Pokemon.NONSEXUAL
         self.__level = 50
         self.__nature = 'まじめ'
@@ -311,7 +311,7 @@ class Pokemon:
             self.apply_template()
 
     def reset_game(self):
-        """ポケモンを試合開始前の状態に初期化する。"""
+        """ポケモンを試合開始前の状態に初期化する"""
         self.come_back()
         self.ailment = ''
         self.terastal = False
@@ -339,7 +339,7 @@ class Pokemon:
             self.update_status()
 
     def come_back(self):
-        """ポケモンを控えに戻したときの状態に初期化する。"""
+        """ポケモンを控えに戻したときの状態に初期化する"""
         self.rank = [0]*8
         self.last_pp_move = ''
         self.last_used_move = ''
@@ -602,7 +602,7 @@ class Pokemon:
                 break
 
     def set_move(self, index: int, move: str):
-        """技を追加してPPを初期化する。"""
+        """技を追加してPPを初期化する"""
         if index not in range(10) or not move or move in self.__moves:
             return
         elif move not in Pokemon.all_moves:
@@ -612,7 +612,7 @@ class Pokemon:
             self.pp[index] = Pokemon.all_moves[move]['pp']
 
     def add_move(self, move: str):
-        """技を追加してPPを初期化する。"""
+        """技を追加してPPを初期化する"""
         if not move or move in self.__moves or len(self.__moves) == 10:
             return
         elif move not in Pokemon.all_moves:
@@ -647,21 +647,21 @@ class Pokemon:
         return True
 
     def has_protected_ability(self) -> bool:
-        """特性が上書きされない状態ならTrueを返す。"""
+        """特性が上書きされない状態ならTrueを返す"""
         return self.ability in Pokemon.ability_category['protected'] or self.item == 'とくせいガード'
 
     def is_blowable(self) -> bool:
-        """強制交代されうる状態ならTrueを返す。"""
+        """強制交代されうる状態ならTrueを返す"""
         return self.ability not in ['きゅうばん','ばんけん'] and not self.condition['neoharu']
 
     def contacts(self, move: str) -> bool:
-        """{move}を使用したときに直接攻撃ならTrueを返す。"""
+        """{move}を使用したときに直接攻撃ならTrueを返す"""
         return move in Pokemon.move_category['contact'] and \
             self.ability != 'えんかく' and self.item != 'ぼうごパッド' and \
             not (move in Pokemon.move_category['punch'] and self.item == 'パンチグローブ')
 
     def item_removable(self):
-        """アイテムを奪われない状態ならTrueを返す。"""
+        """アイテムを奪われない状態ならTrueを返す"""
         if self.ability == 'ねんちゃく' or self.item == 'ブーストエナジー' or \
             'オーガポン(' in self.__name or \
             ('ザシアン' in self.__name and self.item == 'くちたけん') or \
@@ -700,7 +700,7 @@ class Pokemon:
             return 2/(2-self.rank[index])
 
     def move_class(self, move: str) -> str:
-        """{move}を使用したときの技の分類を返す。"""
+        """{move}を使用したときの技の分類を返す"""
         if move in ['テラバースト','テラクラスター'] and self.terastal:
             effA = self.__status[1]*self.rank_correction(1)
             effC = self.__status[3]*self.rank_correction(3)
@@ -708,12 +708,12 @@ class Pokemon:
         return Pokemon.all_moves[move]['class']
 
     def last_pp_move_index(self) -> int:
-        """最後にPPを消費した技のindexを返す。"""
+        """最後にPPを消費した技のindexを返す"""
         return self.__moves.index(self.last_pp_move) if self.last_pp_move and \
             self.last_pp_move in self.__moves else None
 
     def energy_boost(self, boost: bool=True):
-        """{boost}=Trueならブーストエナジーにより能力を上昇させ、Falseなら元に戻す。"""
+        """{boost}=Trueならブーストエナジーにより能力を上昇させ、Falseなら元に戻す"""
         if boost:
             ls = [v*self.rank_correction(i) for i,v in enumerate(self.__status[1:])]
             self.boost_index = ls.index(max(ls)) + 1
@@ -721,10 +721,10 @@ class Pokemon:
             self.boost_index = 0
 
     def fruit_recovery(self, hp_dict: dict) -> dict:
-        """きのみによる回復後のHP dictを返す。リーサル計算用の関数。"""
+        """きのみによる回復後のHP dictを返す。リーサル計算用の関数"""
         result = {}
         for hp in hp_dict:
-            if hp[-2:] == '.0':
+            if hp == '0' or hp[-2:] == '.0':
                 push(result, hp, hp_dict[hp])
             elif self.item in ['オレンのみ','オボンのみ']:
                 if float(hp) <= 0.5*self.__status[0]:
@@ -742,7 +742,7 @@ class Pokemon:
         return result
 
     def damage_text(self, damage: dict, lethal_num: int, lethal_prob: float) -> str:
-        """ リーサル計算結果から 'd1~d2 (p1~p2 %) 確n' 形式の文字列を生成する。"""
+        """ リーサル計算結果から 'd1~d2 (p1~p2 %) 確n' 形式の文字列を生成する"""
         damages = [int(k) for k in list(damage.keys())]
         min_damage, max_damage = min(damages), max(damages)
         
@@ -754,19 +754,19 @@ class Pokemon:
         return result
 
     def find(pokemon_list, name: str='', display_name: str=''):
-        """{pokemon_list}から条件に合致したPokemonインスタンスを返す。"""
+        """{pokemon_list}から条件に合致したPokemonインスタンスを返す"""
         for p in pokemon_list:
             if name == p.name or display_name == p.display_name:
                 return p
 
     def index(pokemon_list, name: str='', display_name: str=''):
-        """{pokemon_list}から条件に合致したPokemonインスタンスのindexを返す。"""
+        """{pokemon_list}から条件に合致したPokemonインスタンスのindexを返す"""
         for i,p in enumerate(pokemon_list):
             if name == p.name or display_name == p.display_name:
                 return i
             
     def rank2str(rank_list: list[int]):
-        """能力ランクから 'A+1 S+1' 形式の文字列を返す。"""
+        """能力ランクから 'A+1 S+1' 形式の文字列を返す"""
         s = ''
         for i,v in enumerate(rank_list):
             if rank_list[i]:
@@ -782,7 +782,7 @@ class Pokemon:
         return p.status
 
     def init(season=None):
-        """ライブラリを初期化する。"""
+        """ライブラリを初期化する"""
 
         # シーズンが指定されていなければ、最新のシーズンを取得する
         if season is None:
@@ -1159,7 +1159,7 @@ class Battle:
         self.was_valid = [True, True]
 
     def reset_game(self):
-        """試合開始前の状態に初期化する。"""
+        """試合開始前の状態に初期化する"""
         self.pokemon = [None, None]
         self.selected = [[], []]
         self.observed = [[], []]
@@ -1204,11 +1204,11 @@ class Battle:
         self.reset_sim_parameters()
 
     def current_index(self, player: int) -> int:
-        """場のポケモンの選出番号を返す。"""
+        """場のポケモンの選出番号を返す"""
         return self.selected[player].index(self.pokemon[player])
     
     def eff_speed(self, player: int) -> int:
-        """特性やアイテムを考慮した、{player}の場のポケモンの実質的な素早さを返す。"""
+        """特性やアイテムを考慮した、{player}の場のポケモンの実質的な素早さを返す"""
         p = self.pokemon[player]
         speed = int(p.status[5]*p.rank_correction(5))
 
@@ -1264,17 +1264,18 @@ class Battle:
         p1 = self.pokemon[player] # 手番
         p2 = self.pokemon[not player] # 相手側
         
-        if p1.item == 'とくせいガード' or p1.ability in Pokemon.ability_category['undeniable']:
-            return p1.ability
-        else:
-            if move in ['シャドーレイ','フォトンゲイザー','メテオドライブ'] or \
-                move and p2.ability in ['かたやぶり','ターボブレイズ','テラボルテージ'] or \
-                (move and p2.ability == 'きんしのちから' and 'sta' in Pokemon.all_moves[move]['class']):
-                return ''
+        if not move or p1.item == 'とくせいガード' or p1.ability in Pokemon.ability_category['undeniable']:
             return p1.ability
 
+        if move in ['シャドーレイ','フォトンゲイザー','メテオドライブ'] or \
+            p2.ability in ['かたやぶり','ターボブレイズ','テラボルテージ'] or \
+            (p2.ability == 'きんしのちから' and 'sta' in Pokemon.all_moves[move]['class']):
+            return ''
+
+        return p1.ability
+
     def is_float(self, player: int) -> bool:
-        """{player}の場のポケモンがふゆう状態ならTrueを返す。"""
+        """{player}の場のポケモンがふゆう状態ならTrueを返す"""
         p = self.pokemon[player]
         if p.item == 'くろいてっきゅう' or p.condition['anti_air'] or p.condition['neoharu'] or self.condition['gravity']:
             return False
@@ -1282,15 +1283,15 @@ class Battle:
             return 'ひこう' in p.types or p.ability == 'ふゆう' or p.item == 'ふうせん' or p.condition['magnetrise']
 
     def is_overcoat(self, player: int, move: str='') -> bool:
-        """{player}の場のポケモンがぼうじん状態ならTrueを返す。"""
+        """{player}の場のポケモンがぼうじん状態ならTrueを返す"""
         return self.pokemon[player].item == 'ぼうじんゴーグル' or self.ability(player, move) == 'ぼうじん'
 
     def is_nervous(self, player: int) -> bool:
-        """{player}の場のポケモンがきんちょうかん状態ならTrueを返す。"""
+        """{player}の場のポケモンがきんちょうかん状態ならTrueを返す"""
         return self.pokemon[not player].ability in ['きんちょうかん','じんばいったい']
 
     def move_type(self, player: int, move: str) -> str:
-        """{player}の場のポケモンが{move}を使用したときの技のタイプを返す。"""
+        """{player}の場のポケモンが{move}を使用したときの技のタイプを返す"""
         p = self.pokemon[player]
         move_type = Pokemon.all_moves[move]['type']
         
@@ -1331,7 +1332,7 @@ class Battle:
         return move_type
 
     def weather(self, player: int=None) -> str:
-        """現在の天候を返す。{player}を指定すると、ばんのうがさを考慮する。"""
+        """現在の天候を返す。{player}を指定すると、ばんのうがさを考慮する"""
         if any(s in [p.ability for p in self.pokemon] for s in ['エアロック', 'ノーてんき']):
             return ''
         for s in Pokemon.weathers:
@@ -1343,7 +1344,7 @@ class Battle:
         return ''
 
     def field(self) -> str:
-        """現在のフィールドを返す。"""
+        """現在のフィールドを返す"""
         for s in Pokemon.fields:
             if self.condition[s]:
                 return s
@@ -1358,7 +1359,7 @@ class Battle:
 
     # ダメージ計算
     def attack_type_correction(self, player: int, move: str) -> float:
-        """{player}の場のポケモンが{move}を使用したときの攻撃タイプ補正値を返す。"""
+        """{player}の場のポケモンが{move}を使用したときの攻撃タイプ補正値を返す"""
         r = 1
         p1 = self.pokemon[player] # 攻撃側
         move_type = self.move_type(player, move)
@@ -2101,11 +2102,11 @@ class Battle:
 
         if self.ability(player2, move) == 'てんねん':
             if r_rank > 1:
-                self.damage_log[player].append('てんねん AC上昇無視')
                 r_rank = 1
+                self.damage_log[player].append('てんねん AC上昇無視')
         elif self.critical and r_rank < 1:
-            self.damage_log[player].append('急所 AC下降無視')
             r_rank = 1
+            self.damage_log[player].append('急所 AC下降無視')
 
         final_attack = int(final_attack*r_rank)
 
@@ -2121,8 +2122,9 @@ class Battle:
         r_rank = 1 if move in Pokemon.move_category['ignore_rank'] else p2.rank_correction(ind)
 
         if self.ability(player, move) == 'てんねん':
-            r_rank = min(1, r_rank)
-            self.damage_log[player].append('てんねん BD上昇無視')
+            if r_rank > 1:
+                r_rank = 1
+                self.damage_log[player].append('てんねん BD上昇無視')
         elif self.critical and r_rank > 1:
             r_rank = 1
             self.damage_log[player].append('急所 BD上昇無視')
@@ -2409,7 +2411,7 @@ class Battle:
         self.standby = [True, True]
 
     def changeable_indexes(self, player: int) -> list[int]:
-        """交代可能なポケモンの選出番号を返す。"""
+        """交代可能なポケモンの選出番号を返す"""
         indexes = []
         for i,p in enumerate(self.selected[player]):
             if p.hp and (self.pokemon[player] is None or i != self.current_index(player)):
@@ -2630,7 +2632,7 @@ class Battle:
         return winner
 
     def choose_damage(self, player: int, damage_list: list[int]) -> int:
-        """乱数により分岐したダメージの中から計算に用いるダメージを選択する。"""
+        """乱数により分岐したダメージの中から計算に用いるダメージを選択する"""
         return self._random.choice(damage_list)
 
     def add_rank(self, player: int, index: int, value: int, rank_list: list[int]=[], 
@@ -2876,7 +2878,7 @@ class Battle:
                         self.log[player].insert(-1, 'あかいいと発動')
     
     def consume_item(self, player: int):
-        """{player}の場のポケモンの持ち物を消費する。対戦シミュレーション用の関数。"""
+        """{player}の場のポケモンの持ち物を消費する。対戦シミュレーション用の関数"""
         player2 = not player
         p1 = self.pokemon[player]
         p2 = self.pokemon[player2]
@@ -2985,7 +2987,7 @@ class Battle:
         return round_half_up(raw_amount*r)
 
     def land(self, player: int):
-        """{player}のポケモンが場に出たときの処理を行う。対戦シミュレーション用の関数。"""
+        """{player}のポケモンが場に出たときの処理を行う。対戦シミュレーション用の関数"""
         p1 = self.pokemon[player]
 
         # 設置物の判定
@@ -3035,7 +3037,7 @@ class Battle:
             self.use_immediate_item(pl)
 
     def unusable_reason(self, player: int, move: str) -> str:
-        """{player}の場のポケモンが{move}を選択できない状態であればその理由を返す。対戦シミュレーション用の関数。"""
+        """{player}の場のポケモンが{move}を選択できない状態であればその理由を返す。対戦シミュレーション用の関数"""
         p = self.pokemon[player]
         if move == 'わるあがき':
             return ''
@@ -3072,7 +3074,7 @@ class Battle:
         return ''
     
     def is_caught(self, player: int) -> bool:
-        """{player}の場のポケモンが交代できない状態ならTrueを返す。対戦シミュレーション用の関数。"""
+        """{player}の場のポケモンが交代できない状態ならTrueを返す。対戦シミュレーション用の関数"""
         player2 = not player
         p1 = self.pokemon[player]
         p2 = self.pokemon[player2]
@@ -3095,14 +3097,14 @@ class Battle:
         return False
 
     def can_move_affects(self, player: int, move: str) -> bool:
-        """{player}の場のポケモンが{move}を使用するとき、追加効果が発生しうるならTrueを返す。対戦シミュレーション用の関数。"""
+        """{player}の場のポケモンが{move}を使用するとき、追加効果が発生しうるならTrueを返す。対戦シミュレーション用の関数"""
         player2 = not player
         p1 = self.pokemon[player]
         p2 = self.pokemon[player2]
         return p1.ability != 'ちからずく' and p2.item != 'おんみつマント' and self.ability(player2, move) != 'りんぷん'
 
     def release_ability(self, player: int) -> None:
-        """{player}の場のポケモンの特性を起動する。"""
+        """{player}の場のポケモンの特性を起動する"""
         player2 = not player
         p1 = self.pokemon[player] # 場に出た側
         p2 = self.pokemon[player2] # 相手側
@@ -3292,7 +3294,7 @@ class Battle:
         return True
 
     def set_weather(self, player: int, weather: str) -> bool:
-        """{player}の場のポケモンに天候を変更させる。対戦シミュレーション用の関数。"""
+        """{player}の場のポケモンに天候を変更させる。対戦シミュレーション用の関数"""
         current_weather = [s for s in Pokemon.weathers if self.condition[s]] or ['']
         current_weather = current_weather[0]
         if weather == current_weather:
@@ -3324,7 +3326,7 @@ class Battle:
         return True
 
     def set_field(self, player: int, field: str) -> bool:
-        """{player}の場のポケモンにフィールドを変更させる。対戦シミュレーション用の関数。"""
+        """{player}の場のポケモンにフィールドを変更させる。対戦シミュレーション用の関数"""
         current_field = [s for s in Pokemon.fields if self.condition[s]] or ['']
         current_field = current_field[0]
         if field == current_field:
@@ -3356,7 +3358,7 @@ class Battle:
         return True
 
     def use_immediate_item(self, player: int) -> str:
-        """{player}の場のポケモンのアイテムが発動可能であれば発動し、そのアイテム名を返す。対戦シミュレーション用の関数。"""
+        """{player}の場のポケモンのアイテムが発動可能であれば発動し、そのアイテム名を返す。対戦シミュレーション用の関数"""
         p = self.pokemon[player]
         triggered = False
         
@@ -3422,7 +3424,7 @@ class Battle:
             return p.item
 
     def hit_probability(self, player: int, move: str) -> int:
-        """{player}の場のポケモンが{move}を使用するときの命中率[%]を返す。対戦シミュレーション用の関数。"""
+        """{player}の場のポケモンが{move}を使用するときの命中率[%]を返す。対戦シミュレーション用の関数"""
         player2 = not player
         p1 = self.pokemon[player] # 攻撃側
         p2 = self.pokemon[player2] # 防御側
@@ -3505,7 +3507,7 @@ class Battle:
         return int(round_half_down(prob*m/4096)*r)/100
 
     def critical_probability(self, player: int, move: str) -> float:
-        """{player}の場のポケモンが{move}を使用するときの急所確率を返す。"""
+        """{player}の場のポケモンが{move}を使用するときの急所確率を返す"""
         player2 = not player
         p1 = self.pokemon[player] # 攻撃側
         p2 = self.pokemon[player2] # 防御側
@@ -3532,7 +3534,7 @@ class Battle:
         return 1/24*(m==0) + 0.125*(m==1) + 0.5*(m==2) + 1*(m>=3)
 
     def move_speed(self, player: int, move: str, random=True) -> int:
-        """<player>の場のポケモンが<move>を使うときの行動速度を返す。"""
+        """<player>の場のポケモンが<move>を使うときの行動速度を返す"""
         speed = 0
 
         p = self.pokemon[player]
@@ -3581,7 +3583,7 @@ class Battle:
         return speed
     
     def update_speed_order(self) -> bool:
-        """素早さ順を更新する。対戦シミュレーション用の関数。"""
+        """素早さ順を更新する。対戦シミュレーション用の関数"""
         if not all(self.pokemon):
             return False
         
